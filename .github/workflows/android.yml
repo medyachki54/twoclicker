@@ -15,7 +15,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-node-version: '16'
+          node-version: '20'
 
       - name: Setup Java
         uses: actions/setup-java@v3
@@ -30,7 +30,7 @@ jobs:
           pip3 install --upgrade pip
           pip3 install Cython==0.29.33 buildozer
 
-      - name: Pre-accept SDK Licenses (Решение проблемы с 37.0.0)
+      - name: Pre-accept SDK Licenses
         run: |
           mkdir -p ~/.buildozer/android/platform/android-sdk/licenses
           echo -e "\n8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb74fa602d3479b19541\n24333f8a63b6825ea9c5514f83c2829b004d1fee" > ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
@@ -41,7 +41,7 @@ jobs:
           buildozer android debug
 
       - name: Upload APK
-        uses: actions/artifacts@v3
+        uses: actions/upload-artifact@v3
         with:
           name: package
           path: .buildozer/android/platform/build/dists/*/bin/*.apk
