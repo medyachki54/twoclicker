@@ -1,70 +1,63 @@
 [app]
 
 # (str) Title of your application
-title = Clicker
+title = Кликер
 
 # (str) Package name
-package.name = clicker
+package.name = twoclicker
 
 # (str) Package domain (needed for android packaging)
 package.domain = org.test
 
-# (str) Source code where the main.py lives (ИСПРАВЛЕНО - теперь сборщик видит файлы!)
+# (str) Source code where the main.py lives
 source.dir = .
 
-# (list) Source files to include (let empty to include all the files)
+# (list) Source files to include
 source.include_exts = py,png,jpg,kv,atlas
 
-# (str) Application version
-version = 0.5
-
 # (list) Application requirements
-# comma separated e.g. requirements = sqlite3,kivy
 requirements = python3,kivy
 
-# (str) Supported orientations (one of landscape, sensorLandscape, portrait or all)
+# (str) Application version / current project state
+version = 3.0
+
+# (int) Orientation (portrait, landscape or all)
 orientation = portrait
 
-# ==============================================================================
-# Android specific
-# ==============================================================================
+# (bool) Use fullscreen or not
+fullscreen = 1
 
-# (list) Permissions
-android.permissions = INTERNET
+# =========================================================
+# Настройки Android (Стабильный и проверенный набор)
+# =========================================================
 
-# (int) Target Android API, should be as high as possible.
+# (int) Android API to use (Target SDK)
 android.api = 33
 
-# (int) Minimum API your APK will support.
+# (int) Minimum API your APK will support
 android.minapi = 21
-
-# (int) Android SDK version to use
-android.sdk = 33
 
 # (str) Android NDK version to use
 android.ndk = 25b
 
+# (str) Android Build-Tools version (ЗАЩИТА ОТ ОШИБКИ AIDL)
+android.build_tools_version = 33.0.0
 
-# (bool) Use --private data storage (True) or --dir public storage (False)
+# (bool) Use private data directory
 android.private_storage = True
 
-# (str) Android logcat filters to use
-android.logcat_filters = *:S python:D
+# (list) Permissions
+android.permissions = INTERNET
 
-# (bool) Copy library instead of making a symbolic link
-android.copy_libs = 1
-
-# (str) The Android arch to build for.
+# (list) Architectures to build for
 android.archs = armeabi-v7a, arm64-v8a
 
-# ==============================================================================
-# Buildozer settings
-# ==============================================================================
+# (bool) Allow backup
+android.allow_backup = True
 
 [buildozer]
-
-# (int) Log level (0 = error only, 1 = info, 2 = debug (with command output))
+# (int) Log level (0 = error only, 1 = info, 2 = debug)
 log_level = 2
 
-# (int) Display warning if buildozer is run as root (0 = False, 1 = True)
+# (int) Display warning if buildozer is run as root
 warn_on_root = 1
