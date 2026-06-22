@@ -33,16 +33,17 @@ orientation = portrait
 android.permissions = INTERNET
 
 # (int) Target Android API, should be as high as possible.
-android.api = 33
+android.api = 31
 
 # (int) Minimum API your APK will support.
 android.minapi = 21
 
 # (int) Android SDK version to use
-android.sdk = 33
+android.sdk = 31
 
 # (str) Android NDK version to use
-android.ndk = 25b
+android.ndk = 23b
+
 
 # (bool) Use --private data storage (True) or --dir public storage (False)
 android.private_storage = True
