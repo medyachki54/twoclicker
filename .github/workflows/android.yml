@@ -42,7 +42,6 @@ jobs:
       - name: Build APK
         run: |
           export JAVA_HOME=$JAVA_HOME_17_X64
-          buildozer android clean
           buildozer android debug
 
       - name: Upload APK
