@@ -9,26 +9,40 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-    # 1. Скачиваем код твоего репозитория
-    - name: Checkout code
+    - name: 1. Скачиваем код
       uses: actions/checkout@v4
 
-    # 2. Используем специальный модуль для стабильной работы Buildozer на GitHub
-    - name: Build with Buildozer
-      uses: ArtemSBulgakov/buildozer-action@v1
-      id: buildozer
+    - name: 2. Устанавливаем Java 17 (Критически важно для Android SDK)
+      uses: actions/setup-java@v4
       with:
-        command: buildozer android debug
-        buildozer_version: master
+        distribution: 'temurin'
+        java-version: '17'
 
-    # 3. Создаем релиз и загружаем туда готовый APK
-    - name: Upload APK to GitHub Releases
+    - name: 3. Устанавливаем Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: 4. Устанавливаем системные библиотеки
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y git zip unzip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
+
+    - name: 5. Устанавливаем Buildozer и Cython
+      run: |
+        pip install --upgrade pip
+        pip install buildozer cython virtualenv
+
+    - name: 6. Собираем APK (Принудительно принимаем лицензии)
+      run: |
+        yes | buildozer -v android debug
+
+    - name: 7. Загружаем готовый APK в Релизы GitHub
       uses: softprops/action-gh-release@v2
       with:
         files: bin/*.apk
         tag_name: v3.0-${{ github.run_number }}
-        name: Релиз версии 3.0 (Сборка #${{ github.run_number }})
-        body: |
-          Автоматическая сборка кликера.
+        name: Кликер (Сборка #${{ github.run_number }})
+        body: "Стабильная сборка без ошибок. Готово к установке."
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
