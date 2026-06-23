@@ -24,7 +24,7 @@ LANGS = {
     'RU': {
         'shop': 'Магазин', 'prof': 'Профиль', 'back': 'Назад', 
         'snd': 'Звук: ', 'lng': 'Язык: РУ', 'on': 'ВКЛ', 'off': 'ВЫКЛ', 
-        'sake': 'Саке: ', 'load': 'Загрузка игры...',
+        'sake': 'Саке: ', 'load': 'Загрузка космического фонда...',
         'name_q': 'Как вас зовут?', 'name_inp': 'Ваше имя...', 'start': 'Начать игру',
         'click': 'Кликай!', 'buy_pwr': 'Сила: ', 'buy_auto': 'Авто: ',
         'player': 'Игрок: ', 'date': 'Дата: ', 'power': 'Сила: ',
@@ -41,7 +41,7 @@ LANGS = {
     'EN': {
         'shop': 'Shop', 'prof': 'Profile', 'back': 'Back', 
         'snd': 'Sound: ', 'lng': 'Lang: EN', 'on': 'ON', 'off': 'OFF', 
-        'sake': 'Sake: ', 'load': 'Loading...',
+        'sake': 'Sake: ', 'load': 'Загрузка космического фонда...',
         'name_q': 'What is your name?', 'name_inp': 'Your name...', 'start': 'Start Game',
         'click': 'Click!', 'buy_pwr': 'Power: ', 'buy_auto': 'Auto: ',
         'player': 'Player: ', 'date': 'Date: ', 'power': 'Power: ',
@@ -119,12 +119,13 @@ class LoadingScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.add_widget(BackgroundWidget(source='space.jpg'))
-        self.lbl = Label(text="", font_size=40)
+        self.lbl = Label(text="", font_size=40, halign="center")
         self.add_widget(self.lbl)
     
     def on_enter(self):
         app = App.get_running_app()
-        self.lbl.text = LANGS[app.lang]['load']
+        # Принудительно ставим русский текст загрузки для атмосферы космического фонда
+        self.lbl.text = LANGS['RU']['load']
         Clock.schedule_once(lambda dt: setattr(self.manager, 'current', 'name' if not app.player_name else 'game'), 2)
 
 class NameScreen(Screen):
@@ -347,14 +348,14 @@ class QuestsScreen(Screen):
         layout.add_widget(self.title_lbl)
         
         # Контейнер со скроллом для квестов в рамках
-        self.scroll = ScrollView(size_hint=(1, 0.75))
+        self.scroll = ScrollView(size_hint=(1, 0.73))
         self.quests_container = BoxLayout(orientation='vertical', spacing=10, size_hint_y=None)
         self.quests_container.bind(minimum_height=self.quests_container.setter('height'))
         self.scroll.add_widget(self.quests_container)
         layout.add_widget(self.scroll)
         
-        # Кнопка НАЗАД (Сделана компактной и отцентрированной)
-        self.btn_back = Button(text="Back", size_hint=(None, None), size=(200, 60), pos_hint={'center_x': 0.5}, font_size=22)
+        # Кнопка НАЗАД (Во весь экран снизу)
+        self.btn_back = Button(text="Back", size_hint=(1, 0.12), font_size=24)
         self.btn_back.bind(on_press=lambda x: setattr(self.manager, 'current', 'game'))
         layout.add_widget(self.btn_back)
         
@@ -368,10 +369,8 @@ class QuestsScreen(Screen):
         self.title_lbl.text = t['quests']
         self.btn_back.text = t['back']
         
-        # Очищаем старые виджеты перед обновлением списка
         self.quests_container.clear_widgets()
         
-        # Список квестов с проверкой их выполнения
         quests_data = [
             {'id': 'q_login1', 'text': t['q_login1'], 'cur': 1, 'max': 1, 'done': True},
             {'id': 'q_time', 'text': t['q_time'], 'cur': min(self.app.play_time // 60, 10), 'max': 10, 'done': (self.app.play_time // 60) >= 10},
@@ -383,27 +382,25 @@ class QuestsScreen(Screen):
         ]
         
         for q in quests_data:
-            # Создаем рамку для квеста
-            row = RoundedFrame(orientation='horizontal', size_hint_y=None, height=75, padding=10, spacing=10)
+            row = RoundedFrame(orientation='horizontal', size_hint_y=None, height=85, padding=10, spacing=10)
             
-            # Текст квеста с выравниванием по левому краю
-            lbl = Label(text=f"{q['text']}: {q['cur']}/{q['max']}", font_size=16, size_hint_x=0.65, halign='left', valign='middle')
+            # Текст увеличен до 24 размера, как ты и просил
+            lbl = Label(text=f"{q['text']}: {q['cur']}/{q['max']}", font_size=24, size_hint_x=0.65, halign='left', valign='middle')
             lbl.bind(size=lambda s, w: setattr(s, 'text_size', w))
             row.add_widget(lbl)
             
-            # Кнопка Забрать рядом с квестом
-            btn = Button(text=t['claim'], size_hint_x=0.35, font_size=16, background_normal='')
+            btn = Button(text=t['claim'], size_hint_x=0.35, font_size=20, background_normal='')
             
             is_claimed = self.app.quests.get(q['id'], 0) == 1
             
             if is_claimed:
                 btn.text = "✓" if self.app.lang == 'RU' else "Claimed"
-                btn.background_color = (0.4, 0.4, 0.4, 1) # Серая (уже получено)
+                btn.background_color = (0.4, 0.4, 0.4, 1)
             elif q['done']:
-                btn.background_color = (0.1, 0.7, 0.1, 1) # Ярко-зеленая (выполнено)
+                btn.background_color = (0.1, 0.7, 0.1, 1)
                 btn.bind(on_press=lambda x, q_id=q['id']: self.claim_quest(q_id))
             else:
-                btn.background_color = (0.3, 0.3, 0.3, 1) # Темно-серая (не выполнено)
+                btn.background_color = (0.3, 0.3, 0.3, 1)
                 
             row.add_widget(btn)
             self.quests_container.add_widget(row)
@@ -412,7 +409,6 @@ class QuestsScreen(Screen):
         if self.app.quests.get(quest_id, 0) == 1:
             return
             
-        # Награда за выполнение квестов
         if quest_id == 'q_login1': self.app.clicks += 100
         elif quest_id == 'q_time': self.app.clicks += 300
         elif quest_id == 'q_click250': self.app.clicks += 250
@@ -424,7 +420,7 @@ class QuestsScreen(Screen):
         if self.app.sound and self.app.sound_buy: 
             self.app.sound_buy.play()
             
-        self.app.quests[quest_id] = 1 # Отмечаем как забранный
+        self.app.quests[quest_id] = 1
         self.app.save_game()
         self.update_ui()
 
@@ -487,6 +483,7 @@ class GameScreen(Screen):
         self.app = App.get_running_app()
         self.add_widget(BackgroundWidget(source='space.jpg'))
         
+        # Информационная панель сверху
         self.info_panel = BoxLayout(orientation='vertical', size_hint=(1, 0.2), pos_hint={'top': 0.98})
         self.info = Label(text='', font_size=30, color=(1,0.8,0,1), bold=True)
         self.lvl_lbl = Label(text='', font_size=24) 
@@ -494,31 +491,31 @@ class GameScreen(Screen):
         self.info_panel.add_widget(self.lvl_lbl)
         self.add_widget(self.info_panel)
         
+        # Кнопка Квестов сверху слева
         self.btn_quest = Button(background_normal='quest.png', size_hint=(None, None), size=(80, 80), pos_hint={'x': 0.05, 'top': 0.98})
         self.btn_quest.bind(on_press=lambda x: setattr(self.manager, 'current', 'quests'))
         self.add_widget(self.btn_quest)
         
+        # Кнопка Настроек сверху справа
         self.btn_set = Button(background_normal='settings.png', size_hint=(None, None), size=(80, 80), pos_hint={'right': 0.95, 'top': 0.98})
         self.btn_set.bind(on_press=lambda x: setattr(self.manager, 'current', 'settings'))
         self.add_widget(self.btn_set)
 
+        # Главная кнопка-корабль по центру
         self.btn = Button(background_normal='ship.png', size_hint=(None, None), size=(300, 300), pos_hint={'center_x': 0.5, 'center_y': 0.5})
         self.btn.bind(on_press=self.on_click)
         self.add_widget(self.btn)
         
-        nav = BoxLayout(size_hint=(1, None), height=100, pos_hint={'bottom': 0}, spacing=20, padding=10)
-        nav.add_widget(Widget()) 
-        
-        self.btn_shop = Button(background_normal='shop.png', text='Shop', size_hint=(None, None), size=(250, 80), pos_hint={'center_y': 0.5})
+        # --- НОВАЯ СИСТЕМА МЕНЮ (МАГАЗИН И ПРОФИЛЬ) ---
+        # Кнопка Магазина: компактная, квадратная, в левом нижнем углу
+        self.btn_shop = Button(background_normal='shop.png', size_hint=(None, None), size=(80, 80), pos_hint={'x': 0.05, 'y': 0.05})
         self.btn_shop.bind(on_press=lambda x: setattr(self.manager, 'current', 'shop'))
+        self.add_widget(self.btn_shop)
         
-        self.btn_prof = Button(background_normal='profile.png', text='Profile', size_hint=(None, None), size=(250, 80), pos_hint={'center_y': 0.5})
+        # Кнопка Профиля: компактная, квадратная, в правом нижнем углу
+        self.btn_prof = Button(background_normal='profile.png', size_hint=(None, None), size=(80, 80), pos_hint={'right': 0.95, 'y': 0.05})
         self.btn_prof.bind(on_press=lambda x: setattr(self.manager, 'current', 'profile'))
-        
-        nav.add_widget(self.btn_shop)
-        nav.add_widget(self.btn_prof)
-        nav.add_widget(Widget()) 
-        self.add_widget(nav)
+        self.add_widget(self.btn_prof)
 
     def on_click(self, instance):
         animate_button(self.btn)
@@ -533,8 +530,6 @@ class GameScreen(Screen):
         t = LANGS[self.app.lang]
         self.info.text = f"{t['sake']} {int(self.app.clicks)}"
         self.lvl_lbl.text = f"{t['level']} {self.app.level} | {t['exp']} {int(self.app.current_exp)}/{self.app.exp_goal}"
-        self.btn_shop.text = t['shop']
-        self.btn_prof.text = t['prof']
 
     def on_enter(self):
         self.update_ui()
@@ -591,6 +586,9 @@ class ClickerApp(App):
     def on_start(self):
         Clock.schedule_interval(self.game_tick, 1.0)
         Clock.schedule_interval(self.auto_save, 10.0)
+        # Дополнительная проверка на запуск музыки, если она не подхватилась в build()
+        if self.music and self.sound and not self.music.state == 'play':
+            self.music.play()
 
     def game_tick(self, dt):
         self.play_time += 1
