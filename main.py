@@ -76,12 +76,9 @@ def get_level_title(level, lang):
     return t[10]
 
 def animate_button(widget):
-    # Исправление бага с бесконечным уменьшением:
-    # Запоминаем оригинальный размер кнопки
     if not hasattr(widget, 'orig_size'):
         widget.orig_size = widget.size
         
-    # Отменяем предыдущую анимацию, чтобы не наслаивать их друг на друга
     Animation.cancel_all(widget)
     
     w, h = widget.orig_size
@@ -95,7 +92,7 @@ class BackgroundWidget(Widget):
         super().__init__(**kwargs)
         with self.canvas.before:
             self.bg_rect = Rectangle(source=source, pos=self.pos, size=Window.size)
-            Color(0, 0, 0, 0.5) # Затемнение фона для читаемости
+            Color(0, 0, 0, 0.5) 
             self.dark_rect = Rectangle(pos=self.pos, size=Window.size)
         self.bind(pos=self.update, size=self.update)
 
@@ -328,7 +325,6 @@ class SettingsScreen(Screen):
         self.manager.current = 'name'
 
     def reset_game(self, instance):
-        # Жесткий сброс прогресса
         self.app.clicks = 0
         self.app.power = 1
         self.app.auto = 0
@@ -345,20 +341,20 @@ class QuestsScreen(Screen):
         super().__init__(**kwargs)
         self.add_widget(BackgroundWidget(source='space.jpg'))
         self.app = App.get_running_app()
-        layout = BoxLayout(orientation='vertical', padding=20, spacing=20)
+        layout = BoxLayout(orientation='vertical', padding=20, spacing=15)
         
         self.title_lbl = Label(text="Quests", font_size=40, size_hint=(1, 0.1))
         layout.add_widget(self.title_lbl)
         
-        # Уменьшен шрифт, чтобы все квесты помещались на экране
-        self.quest_lbl = Label(text="In Progress...", font_size=20, size_hint=(1, 0.6), halign="center", markup=True)
-        layout.add_widget(self.quest_lbl)
-
-        self.btn_claim = Button(text="Claim Gift", size_hint=(1, 0.15), font_size=24)
-        self.btn_claim.bind(on_press=self.claim_gift)
-        layout.add_widget(self.btn_claim)
+        # Контейнер со скроллом для квестов в рамках
+        self.scroll = ScrollView(size_hint=(1, 0.75))
+        self.quests_container = BoxLayout(orientation='vertical', spacing=10, size_hint_y=None)
+        self.quests_container.bind(minimum_height=self.quests_container.setter('height'))
+        self.scroll.add_widget(self.quests_container)
+        layout.add_widget(self.scroll)
         
-        self.btn_back = Button(text="Back", size_hint=(1, 0.15), font_size=24)
+        # Кнопка НАЗАД (Сделана компактной и отцентрированной)
+        self.btn_back = Button(text="Back", size_hint=(None, None), size=(200, 60), pos_hint={'center_x': 0.5}, font_size=22)
         self.btn_back.bind(on_press=lambda x: setattr(self.manager, 'current', 'game'))
         layout.add_widget(self.btn_back)
         
@@ -371,32 +367,66 @@ class QuestsScreen(Screen):
         t = LANGS[self.app.lang]
         self.title_lbl.text = t['quests']
         self.btn_back.text = t['back']
-        self.btn_claim.text = t['gift']
         
-        # Обновление текста: теперь отображаются ВСЕ квесты
-        quests_text = f"[b]{t['q_login1']}[/b]: 1/1\n"
-        quests_text += f"[b]{t['q_time']}[/b]: {min(self.app.play_time//60, 10)}/10\n"
-        quests_text += f"[b]{t['q_click250']}[/b]: {min(self.app.total_clicks, 250)}/250\n"
-        quests_text += f"[b]{t['q_click500']}[/b]: {min(self.app.total_clicks, 500)}/500\n"
-        quests_text += f"[b]{t['q_save1']}[/b]: {min(int(self.app.clicks), 1000)}/1000\n"
-        quests_text += f"[b]{t['q_save5']}[/b]: {min(int(self.app.clicks), 5000)}/5000\n"
-        quests_text += f"[b]{t['q_shop']}[/b]: {min(self.app.pwr_bought + self.app.auto_bought, 1)}/1\n"
-        self.quest_lbl.text = quests_text
+        # Очищаем старые виджеты перед обновлением списка
+        self.quests_container.clear_widgets()
+        
+        # Список квестов с проверкой их выполнения
+        quests_data = [
+            {'id': 'q_login1', 'text': t['q_login1'], 'cur': 1, 'max': 1, 'done': True},
+            {'id': 'q_time', 'text': t['q_time'], 'cur': min(self.app.play_time // 60, 10), 'max': 10, 'done': (self.app.play_time // 60) >= 10},
+            {'id': 'q_click250', 'text': t['q_click250'], 'cur': min(self.app.total_clicks, 250), 'max': 250, 'done': self.app.total_clicks >= 250},
+            {'id': 'q_click500', 'text': t['q_click500'], 'cur': min(self.app.total_clicks, 500), 'max': 500, 'done': self.app.total_clicks >= 500},
+            {'id': 'q_save1', 'text': t['q_save1'], 'cur': min(int(self.app.clicks), 1000), 'max': 1000, 'done': self.app.clicks >= 1000},
+            {'id': 'q_save5', 'text': t['q_save5'], 'cur': min(int(self.app.clicks), 5000), 'max': 5000, 'done': self.app.clicks >= 5000},
+            {'id': 'q_shop', 'text': t['q_shop'], 'cur': min(self.app.pwr_bought + self.app.auto_bought, 1), 'max': 1, 'done': (self.app.pwr_bought + self.app.auto_bought) >= 1},
+        ]
+        
+        for q in quests_data:
+            # Создаем рамку для квеста
+            row = RoundedFrame(orientation='horizontal', size_hint_y=None, height=75, padding=10, spacing=10)
+            
+            # Текст квеста с выравниванием по левому краю
+            lbl = Label(text=f"{q['text']}: {q['cur']}/{q['max']}", font_size=16, size_hint_x=0.65, halign='left', valign='middle')
+            lbl.bind(size=lambda s, w: setattr(s, 'text_size', w))
+            row.add_widget(lbl)
+            
+            # Кнопка Забрать рядом с квестом
+            btn = Button(text=t['claim'], size_hint_x=0.35, font_size=16, background_normal='')
+            
+            is_claimed = self.app.quests.get(q['id'], 0) == 1
+            
+            if is_claimed:
+                btn.text = "✓" if self.app.lang == 'RU' else "Claimed"
+                btn.background_color = (0.4, 0.4, 0.4, 1) # Серая (уже получено)
+            elif q['done']:
+                btn.background_color = (0.1, 0.7, 0.1, 1) # Ярко-зеленая (выполнено)
+                btn.bind(on_press=lambda x, q_id=q['id']: self.claim_quest(q_id))
+            else:
+                btn.background_color = (0.3, 0.3, 0.3, 1) # Темно-серая (не выполнено)
+                
+            row.add_widget(btn)
+            self.quests_container.add_widget(row)
 
-    def claim_gift(self, instance):
-        now = time.time()
-        if now - self.app.last_gift_time > 300: # 5 минут кулдаун
-            self.app.clicks += 200
-            self.app.last_gift_time = now
-            self.app.save_game()
-            self.btn_claim.text = "Claimed!"
-            self.btn_claim.disabled = True
-            Clock.schedule_once(self.enable_claim, 5)
-
-    def enable_claim(self, dt):
-        self.btn_claim.disabled = False
-        t = LANGS[self.app.lang]
-        self.btn_claim.text = t['gift']
+    def claim_quest(self, quest_id):
+        if self.app.quests.get(quest_id, 0) == 1:
+            return
+            
+        # Награда за выполнение квестов
+        if quest_id == 'q_login1': self.app.clicks += 100
+        elif quest_id == 'q_time': self.app.clicks += 300
+        elif quest_id == 'q_click250': self.app.clicks += 250
+        elif quest_id == 'q_click500': self.app.clicks += 500
+        elif quest_id == 'q_save1': self.app.clicks += 500
+        elif quest_id == 'q_save5': self.app.clicks += 1500
+        elif quest_id == 'q_shop': self.app.clicks += 300
+        
+        if self.app.sound and self.app.sound_buy: 
+            self.app.sound_buy.play()
+            
+        self.app.quests[quest_id] = 1 # Отмечаем как забранный
+        self.app.save_game()
+        self.update_ui()
 
 class AchievementScreen(Screen):
     def __init__(self, **kwargs):
@@ -425,7 +455,6 @@ class AchievementScreen(Screen):
         self.title_lbl.text = t['achs']
         self.btn_back.text = t['back']
         
-        # Расширенный список всех достижений
         achievements = [
             ("Click Novice", "10 Clicks", self.app.total_clicks >= 10),
             ("Click Amateur", "250 Clicks", self.app.total_clicks >= 250),
@@ -465,7 +494,6 @@ class GameScreen(Screen):
         self.info_panel.add_widget(self.lvl_lbl)
         self.add_widget(self.info_panel)
         
-        # Кнопки навигации верхние (Обе имеют одинаковый размер 80x80)
         self.btn_quest = Button(background_normal='quest.png', size_hint=(None, None), size=(80, 80), pos_hint={'x': 0.05, 'top': 0.98})
         self.btn_quest.bind(on_press=lambda x: setattr(self.manager, 'current', 'quests'))
         self.add_widget(self.btn_quest)
@@ -474,16 +502,13 @@ class GameScreen(Screen):
         self.btn_set.bind(on_press=lambda x: setattr(self.manager, 'current', 'settings'))
         self.add_widget(self.btn_set)
 
-        # Главная кнопка (Корабль)
         self.btn = Button(background_normal='ship.png', size_hint=(None, None), size=(300, 300), pos_hint={'center_x': 0.5, 'center_y': 0.5})
         self.btn.bind(on_press=self.on_click)
         self.add_widget(self.btn)
         
-        # Нижняя панель (Исправлены растянутые кнопки)
         nav = BoxLayout(size_hint=(1, None), height=100, pos_hint={'bottom': 0}, spacing=20, padding=10)
-        nav.add_widget(Widget()) # Центрирующий отступ слева
+        nav.add_widget(Widget()) 
         
-        # Жесткий размер 250х80 чтобы кнопки не растягивались
         self.btn_shop = Button(background_normal='shop.png', text='Shop', size_hint=(None, None), size=(250, 80), pos_hint={'center_y': 0.5})
         self.btn_shop.bind(on_press=lambda x: setattr(self.manager, 'current', 'shop'))
         
@@ -492,7 +517,7 @@ class GameScreen(Screen):
         
         nav.add_widget(self.btn_shop)
         nav.add_widget(self.btn_prof)
-        nav.add_widget(Widget()) # Центрирующий отступ справа
+        nav.add_widget(Widget()) 
         self.add_widget(nav)
 
     def on_click(self, instance):
@@ -501,7 +526,7 @@ class GameScreen(Screen):
             self.app.sound_click.play()
         self.app.clicks += self.app.power
         self.app.total_clicks += 1
-        self.app.add_exp(5) # Опыт за клик
+        self.app.add_exp(5) 
         self.update_ui()
 
     def update_ui(self):
@@ -518,12 +543,10 @@ class GameScreen(Screen):
 
 class ClickerApp(App):
     def build(self):
-        # Загрузка звуков
         self.sound_click = SoundLoader.load('click.mp3')
         self.sound_buy = SoundLoader.load('buy.mp3')
         self.music = SoundLoader.load('background.mp3')
         
-        # Параметры (начальные)
         self.clicks = 0
         self.power = 1
         self.auto = 0
@@ -543,17 +566,15 @@ class ClickerApp(App):
         self.sound = True
         self.last_quest_reset = time.time()
         self.last_gift_time = 0
-        self.quests = {'c1':0, 'c2':0, 'c3':1, 'time':0, 'save':0, 'save5':0, 'q_shop':0} 
+        self.quests = {'q_login1':0, 'q_time':0, 'q_click250':0, 'q_click500':0, 'q_save1':0, 'q_save5':0, 'q_shop':0} 
         
         self.load_game()
         
-        # Запуск фоновой музыки
         if self.music and self.sound:
             self.music.loop = True
             self.music.volume = 0.3
             self.music.play()
 
-        # Инициализация экранов
         self.sm = ScreenManager()
         self.sm.add_widget(LoadingScreen(name='load'))
         self.sm.add_widget(NameScreen(name='name'))
@@ -568,17 +589,14 @@ class ClickerApp(App):
         return self.sm
 
     def on_start(self):
-        # Таймер для автоклика и времени в игре (вызывается каждую секунду)
         Clock.schedule_interval(self.game_tick, 1.0)
-        # Таймер для автосохранения (каждые 10 секунд)
         Clock.schedule_interval(self.auto_save, 10.0)
 
     def game_tick(self, dt):
         self.play_time += 1
         if self.auto > 0:
             self.clicks += self.auto
-            self.add_exp(self.auto * 0.5) # Немного опыта за автоклики
-            # Обновляем UI если мы на главном экране
+            self.add_exp(self.auto * 0.5) 
             if self.sm.current == 'game':
                 self.sm.get_screen('game').update_ui()
 
@@ -587,7 +605,7 @@ class ClickerApp(App):
         if self.current_exp >= self.exp_goal:
             self.level += 1
             self.current_exp = 0
-            self.exp_goal = int(self.exp_goal * 1.5) # Увеличиваем порог следующего уровня
+            self.exp_goal = int(self.exp_goal * 1.5) 
         
     def auto_save(self, dt):
         self.save_game()
@@ -609,7 +627,8 @@ class ClickerApp(App):
             'lang': self.lang,
             'sound': self.sound,
             'pwr_bought': self.pwr_bought,
-            'auto_bought': self.auto_bought
+            'auto_bought': self.auto_bought,
+            'quests': self.quests
         }
         with open('save.json', 'w', encoding='utf-8') as f: 
             json.dump(save_data, f, ensure_ascii=False)
@@ -635,6 +654,7 @@ class ClickerApp(App):
                     self.sound = d.get('sound', True)
                     self.pwr_bought = d.get('pwr_bought', 0)
                     self.auto_bought = d.get('auto_bought', 0)
+                    self.quests = d.get('quests', {'q_login1':0, 'q_time':0, 'q_click250':0, 'q_click500':0, 'q_save1':0, 'q_save5':0, 'q_shop':0})
             except Exception as e:
                 print("Ошибка при загрузке сохранения:", e)
 
