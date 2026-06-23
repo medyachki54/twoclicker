@@ -15,11 +15,14 @@ source.dir = .
 # (list) Source files to include
 source.include_exts = py,png,jpg,kv,atlas
 
+# (str) Path to the application icon
+icon.filename = icon.png
+
 # (list) Application requirements
 requirements = python3,kivy
 
 # (str) Application version / current project state
-version = 3.0
+version = 4.0
 
 # (int) Orientation (portrait, landscape or all)
 orientation = portrait
@@ -28,7 +31,7 @@ orientation = portrait
 fullscreen = 1
 
 # =========================================================
-# Настройки Android (Стабильный и проверенный набор)
+# Настройки Android
 # =========================================================
 
 # (int) Android API to use (Target SDK)
@@ -40,7 +43,7 @@ android.minapi = 21
 # (str) Android NDK version to use
 android.ndk = 25b
 
-# (str) Android Build-Tools version (ЗАЩИТА ОТ ОШИБКИ AIDL)
+# (str) Android Build-Tools version
 android.build_tools_version = 33.0.0
 
 # (bool) Use private data directory
