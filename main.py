@@ -76,7 +76,16 @@ def get_level_title(level, lang):
     return t[10]
 
 def animate_button(widget):
-    anim = Animation(size=(widget.width * 0.9, widget.height * 0.9), duration=0.05) + Animation(size=(widget.width, widget.height), duration=0.05)
+    # Исправление бага с бесконечным уменьшением:
+    # Запоминаем оригинальный размер кнопки
+    if not hasattr(widget, 'orig_size'):
+        widget.orig_size = widget.size
+        
+    # Отменяем предыдущую анимацию, чтобы не наслаивать их друг на друга
+    Animation.cancel_all(widget)
+    
+    w, h = widget.orig_size
+    anim = Animation(size=(w * 0.9, h * 0.9), duration=0.05) + Animation(size=(w, h), duration=0.05)
     anim.start(widget)
 
 # --- ВИДЖЕТЫ ---
@@ -341,7 +350,8 @@ class QuestsScreen(Screen):
         self.title_lbl = Label(text="Quests", font_size=40, size_hint=(1, 0.1))
         layout.add_widget(self.title_lbl)
         
-        self.quest_lbl = Label(text="In Progress...", font_size=24, size_hint=(1, 0.6), halign="center", markup=True)
+        # Уменьшен шрифт, чтобы все квесты помещались на экране
+        self.quest_lbl = Label(text="In Progress...", font_size=20, size_hint=(1, 0.6), halign="center", markup=True)
         layout.add_widget(self.quest_lbl)
 
         self.btn_claim = Button(text="Claim Gift", size_hint=(1, 0.15), font_size=24)
@@ -363,13 +373,17 @@ class QuestsScreen(Screen):
         self.btn_back.text = t['back']
         self.btn_claim.text = t['gift']
         
-        # Обновление текста квестов (простая демонстрация)
-        quests_text = f"[b]{t['q_time']}[/b]: {min(self.app.play_time//60, 10)}/10\n"
+        # Обновление текста: теперь отображаются ВСЕ квесты
+        quests_text = f"[b]{t['q_login1']}[/b]: 1/1\n"
+        quests_text += f"[b]{t['q_time']}[/b]: {min(self.app.play_time//60, 10)}/10\n"
         quests_text += f"[b]{t['q_click250']}[/b]: {min(self.app.total_clicks, 250)}/250\n"
+        quests_text += f"[b]{t['q_click500']}[/b]: {min(self.app.total_clicks, 500)}/500\n"
+        quests_text += f"[b]{t['q_save1']}[/b]: {min(int(self.app.clicks), 1000)}/1000\n"
+        quests_text += f"[b]{t['q_save5']}[/b]: {min(int(self.app.clicks), 5000)}/5000\n"
+        quests_text += f"[b]{t['q_shop']}[/b]: {min(self.app.pwr_bought + self.app.auto_bought, 1)}/1\n"
         self.quest_lbl.text = quests_text
 
     def claim_gift(self, instance):
-        # Подарок можно забирать раз в некоторое время, для упрощения - даем сразу и просим подождать (демо)
         now = time.time()
         if now - self.app.last_gift_time > 300: # 5 минут кулдаун
             self.app.clicks += 200
@@ -377,7 +391,7 @@ class QuestsScreen(Screen):
             self.app.save_game()
             self.btn_claim.text = "Claimed!"
             self.btn_claim.disabled = True
-            Clock.schedule_once(self.enable_claim, 5) # Визуально заблокируем кнопку на 5 сек
+            Clock.schedule_once(self.enable_claim, 5)
 
     def enable_claim(self, dt):
         self.btn_claim.disabled = False
@@ -411,12 +425,23 @@ class AchievementScreen(Screen):
         self.title_lbl.text = t['achs']
         self.btn_back.text = t['back']
         
-        # Генерация списка достижений
+        # Расширенный список всех достижений
         achievements = [
-            ("Clicker Novice", "10 Clicks", self.app.total_clicks >= 10),
-            ("Clicker Pro", "1000 Clicks", self.app.total_clicks >= 1000),
+            ("Click Novice", "10 Clicks", self.app.total_clicks >= 10),
+            ("Click Amateur", "250 Clicks", self.app.total_clicks >= 250),
+            ("Click Pro", "1000 Clicks", self.app.total_clicks >= 1000),
+            ("Click Master", "5000 Clicks", self.app.total_clicks >= 5000),
+            ("Click God", "10000 Clicks", self.app.total_clicks >= 10000),
+            ("Level 5!", "Reach Level 5", self.app.level >= 5),
             ("Level 10!", "Reach Level 10", self.app.level >= 10),
-            ("Auto Master", "Buy 5 Auto", self.app.auto_bought >= 5)
+            ("Level 25!", "Reach Level 25", self.app.level >= 25),
+            ("Level 50!", "Reach Level 50", self.app.level >= 50),
+            ("Auto Novice", "Buy 1 Auto", self.app.auto_bought >= 1),
+            ("Auto Master", "Buy 5 Auto", self.app.auto_bought >= 5),
+            ("Auto Tycoon", "Buy 20 Auto", self.app.auto_bought >= 20),
+            ("Power Novice", "Buy 1 Power", self.app.pwr_bought >= 1),
+            ("Power Master", "Buy 5 Power", self.app.pwr_bought >= 5),
+            ("Power God", "Buy 20 Power", self.app.pwr_bought >= 20)
         ]
         
         text = ""
@@ -440,7 +465,7 @@ class GameScreen(Screen):
         self.info_panel.add_widget(self.lvl_lbl)
         self.add_widget(self.info_panel)
         
-        # Кнопки навигации верхние
+        # Кнопки навигации верхние (Обе имеют одинаковый размер 80x80)
         self.btn_quest = Button(background_normal='quest.png', size_hint=(None, None), size=(80, 80), pos_hint={'x': 0.05, 'top': 0.98})
         self.btn_quest.bind(on_press=lambda x: setattr(self.manager, 'current', 'quests'))
         self.add_widget(self.btn_quest)
@@ -454,14 +479,20 @@ class GameScreen(Screen):
         self.btn.bind(on_press=self.on_click)
         self.add_widget(self.btn)
         
-        # Нижняя панель
-        nav = BoxLayout(size_hint=(1, None), height=100, pos_hint={'bottom': 0}, spacing=10, padding=10)
-        self.btn_shop = Button(background_normal='shop.png', text='Shop', size_hint=(0.5, 1))
+        # Нижняя панель (Исправлены растянутые кнопки)
+        nav = BoxLayout(size_hint=(1, None), height=100, pos_hint={'bottom': 0}, spacing=20, padding=10)
+        nav.add_widget(Widget()) # Центрирующий отступ слева
+        
+        # Жесткий размер 250х80 чтобы кнопки не растягивались
+        self.btn_shop = Button(background_normal='shop.png', text='Shop', size_hint=(None, None), size=(250, 80), pos_hint={'center_y': 0.5})
         self.btn_shop.bind(on_press=lambda x: setattr(self.manager, 'current', 'shop'))
-        self.btn_prof = Button(background_normal='profile.png', text='Profile', size_hint=(0.5, 1))
+        
+        self.btn_prof = Button(background_normal='profile.png', text='Profile', size_hint=(None, None), size=(250, 80), pos_hint={'center_y': 0.5})
         self.btn_prof.bind(on_press=lambda x: setattr(self.manager, 'current', 'profile'))
+        
         nav.add_widget(self.btn_shop)
         nav.add_widget(self.btn_prof)
+        nav.add_widget(Widget()) # Центрирующий отступ справа
         self.add_widget(nav)
 
     def on_click(self, instance):
@@ -557,7 +588,6 @@ class ClickerApp(App):
             self.level += 1
             self.current_exp = 0
             self.exp_goal = int(self.exp_goal * 1.5) # Увеличиваем порог следующего уровня
-            # Звук уровня можно добавить здесь
         
     def auto_save(self, dt):
         self.save_game()
