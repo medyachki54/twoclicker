@@ -8,6 +8,10 @@ jobs:
   build:
     runs-on: ubuntu-22.04
 
+    # ❗ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Выдаем права на запись для создания релизов
+    permissions:
+      contents: write
+
     steps:
     - name: 1. Скачиваем код
       uses: actions/checkout@v4
