@@ -2,7 +2,6 @@ import json
 import os
 import time
 from datetime import datetime
-
 from kivy.app import App
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.boxlayout import BoxLayout
